@@ -1,0 +1,10 @@
+apiVersion: 1
+
+providers:
+  - allowUiUpdates: true
+    disableDeletion: false
+    name: provisioned
+    options:
+      foldersFromFilesStructure: true
+      path: /var/lib/grafana/dashboards
+    updateIntervalSeconds: 10
