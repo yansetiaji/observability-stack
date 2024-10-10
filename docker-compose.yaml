@@ -1,10 +1,15 @@
 name: observability-tools
 
+x-all-common: &all-common
+  restart: unless-stopped
+  networks:
+    - observability-tools
+
 services:
   grafana:
+    <<: *all-common
     image: grafana/grafana-oss:${IMAGE_VERSION_GRAFANA}
     container_name: ${CONTAINER_NAME_GRAFANA}
-    restart: unless-stopped
     volumes:
       - ${VOLUME_MOUNT_ROOT}/${CONTAINER_NAME_GRAFANA}/data:/var/lib/grafana
       - ${VOLUME_MOUNT_ROOT}/${CONTAINER_NAME_GRAFANA}/logs/:/var/log/grafana
@@ -22,8 +27,6 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
     ports:
       - '${PORT_GRAFANA}:3000'
-    networks:
-      - observability-tools
     depends_on:
       - grafana-postgres
       - prometheus
@@ -38,17 +41,15 @@ services:
       - "traefik.http.routers.${CONTAINER_NAME_GRAFANA}.tls.certresolver=${TRAEFIK_CERT_RESOLVER}"
 
   grafana-postgres:
+    <<: *all-common
     image: postgres:${IMAGE_VERSION_GRAFANA_POSTGRES}
     container_name: ${CONTAINER_NAME_GRAFANA_POSTGRES}
-    restart: unless-stopped
     environment:
       - POSTGRES_USER=${GF_DATABASE_USER}
       - POSTGRES_PASSWORD=${GF_DATABASE_PASSWORD}
       - POSTGRES_DB=${GF_DATABASE_NAME}
     volumes:
       - ${VOLUME_MOUNT_ROOT}/${CONTAINER_NAME_GRAFANA_POSTGRES}/data:/var/lib/postgresql/data
-    networks:
-      - observability-tools
 
   node_exporter:
     image: prom/node-exporter:${IMAGE_VERSION_NODE_EXPORTER}
@@ -62,9 +63,9 @@ services:
       - '/:/host:ro,rslave'
 
   cadvisor:
+    <<: *all-common
     image: gcr.io/cadvisor/cadvisor:${IMAGE_VERSION_CADVISOR}
     container_name: ${CONTAINER_NAME_CADVISOR}
-    restart: unless-stopped
     volumes:
       - /:/rootfs:ro
       - /var/run:/var/run:ro
@@ -76,8 +77,6 @@ services:
       - ${PORT_CADVISOR}:8080
     devices:
       - /dev/kmsg
-    networks:
-      - observability-tools
     labels:
       - "traefik.enable=${TRAEFIK_ENABLE}"
       - "traefik.http.routers.${CONTAINER_NAME_CADVISOR}.rule=Host(`${CONTAINER_NAME_CADVISOR}.${TRAEFIK_DOMAIN_NAME}`)"
@@ -87,9 +86,9 @@ services:
       - "traefik.http.routers.${CONTAINER_NAME_CADVISOR}.tls.certresolver=${TRAEFIK_CERT_RESOLVER}"
 
   prometheus:
+    <<: *all-common
     image: prom/prometheus:${IMAGE_VERSION_PROMETHEUS}
     container_name: ${CONTAINER_NAME_PROMETHEUS}
-    restart: unless-stopped
     user: '0'
     volumes:
       - ${CONFIG_MOUNT_ROOT}/${CONTAINER_NAME_PROMETHEUS}/prometheus.yml:/etc/prometheus/prometheus.yml
@@ -102,8 +101,6 @@ services:
       - --web.enable-lifecycle # to enable config reload with HTTP POST http://prometheus:9090/-/reload
     ports:
       - ${PORT_PROMETHEUS}:9090
-    networks:
-      - observability-tools
     # In case you want to scrape node_exporter data from host
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -116,9 +113,9 @@ services:
       - "traefik.http.routers.${CONTAINER_NAME_PROMETHEUS}.tls.certresolver=${TRAEFIK_CERT_RESOLVER}"
 
   alertmanager:
+    <<: *all-common
     image: prom/alertmanager:${IMAGE_VERSION_ALERTMANAGER}
     container_name: ${CONTAINER_NAME_ALERTMANAGER}
-    restart: unless-stopped
     user: '0'
     volumes:
       - ${CONFIG_MOUNT_ROOT}/${CONTAINER_NAME_ALERTMANAGER}/alertmanager.yml:/etc/alertmanager/alertmanager.yml
@@ -128,8 +125,6 @@ services:
       - --storage.path=/alertmanager
     ports:
       - ${PORT_ALERTMANAGER}:9093
-    networks:
-      - observability-tools
     # In case you want to scrape node_exporter data from host
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -139,33 +134,30 @@ services:
       - "traefik.enable=${TRAEFIK_ENABLE}"
       - "traefik.http.routers.${CONTAINER_NAME_ALERTMANAGER}.rule=Host(`${CONTAINER_NAME_ALERTMANAGER}.${TRAEFIK_DOMAIN_NAME}`)"
       - "traefik.http.routers.${CONTAINER_NAME_ALERTMANAGER}.entrypoints=${TRAEFIK_ENTRYPOINT}"
-      - "traefik.http.services.${CONTAINER_NAME_ALERTMANAGER}.loadbalancer.server.port=9090"
+      - "traefik.http.services.${CONTAINER_NAME_ALERTMANAGER}.loadbalancer.server.port=9093"
       - "traefik.http.routers.${CONTAINER_NAME_ALERTMANAGER}.service=${CONTAINER_NAME_ALERTMANAGER}"
       - "traefik.http.routers.${CONTAINER_NAME_ALERTMANAGER}.tls.certresolver=${TRAEFIK_CERT_RESOLVER}"
 
   loki:
+    <<: *all-common
     image: grafana/loki:${IMAGE_VERSION_LOKI}
     container_name: ${CONTAINER_NAME_LOKI}
-    restart: unless-stopped
     ports:
       - "${PORT_LOKI}:3100"
     command: -config.file=/etc/loki/local-config.yaml
-    networks:
-      - observability-tools
 
   tempo:
+    <<: *all-common
     container_name: ${CONTAINER_NAME_TEMPO}
     image: grafana/tempo:${IMAGE_VERSION_TEMPO}
     command: -config.file=/etc/tempo.yml
     volumes:
       - ${CONFIG_MOUNT_ROOT}/${CONTAINER_NAME_TEMPO}/tempo.yml:/etc/tempo.yml
-    restart: unless-stopped
     ports:
       - "${PORT_TEMPO}:3200"
-    networks:
-      - observability-tools
 
   otel-collector:
+    <<: *all-common
     image: otel/opentelemetry-collector-contrib:${IMAGE_VERSION_OTEL_COLLECTOR}
     container_name: ${CONTAINER_NAME_OTEL_COLLECTOR}
     volumes:
@@ -175,24 +167,43 @@ services:
       # - 8889:8889 # Prometheus exporter metrics
       - ${PORT_OTEL_GRPC}:4317 # OTLP gRPC receiver
       - ${PORT_OTEL_HTTP}:4318 # OTLP http receiver
-    networks:
-      - observability-tools
     depends_on:
       - prometheus
       - loki
       - tempo
     labels:
       - "traefik.enable=${TRAEFIK_ENABLE}"
+      # GRPC
       - "traefik.http.routers.${CONTAINER_NAME_OTEL_COLLECTOR}-grpc.rule=Host(`otel-grpc.${TRAEFIK_DOMAIN_NAME}`)"
       - "traefik.http.routers.${CONTAINER_NAME_OTEL_COLLECTOR}-grpc.entrypoints=${TRAEFIK_ENTRYPOINT}"
       - "traefik.http.services.${CONTAINER_NAME_OTEL_COLLECTOR}-grpc.loadbalancer.server.port=4317"
       - "traefik.http.routers.${CONTAINER_NAME_OTEL_COLLECTOR}-grpc.service=${CONTAINER_NAME_OTEL_COLLECTOR}-grpc"
       - "traefik.http.routers.${CONTAINER_NAME_OTEL_COLLECTOR}-grpc.tls.certresolver=${TRAEFIK_CERT_RESOLVER}"
+      # HTTP
       - "traefik.http.routers.${CONTAINER_NAME_OTEL_COLLECTOR}-http.rule=Host(`otel-http.${TRAEFIK_DOMAIN_NAME}`)"
       - "traefik.http.routers.${CONTAINER_NAME_OTEL_COLLECTOR}-http.entrypoints=${TRAEFIK_ENTRYPOINT}"
       - "traefik.http.services.${CONTAINER_NAME_OTEL_COLLECTOR}-http.loadbalancer.server.port=4318"
       - "traefik.http.routers.${CONTAINER_NAME_OTEL_COLLECTOR}-http.service=${CONTAINER_NAME_OTEL_COLLECTOR}-http"
       - "traefik.http.routers.${CONTAINER_NAME_OTEL_COLLECTOR}-http.tls.certresolver=${TRAEFIK_CERT_RESOLVER}"
+
+  minio:
+    <<: *all-common
+    image: minio/minio:${IMAGE_VERSION_MINIO}
+    container_name: ${CONTAINER_NAME_MINIO}
+    ports:
+      - "${PORT_MINIO_API}:9000"
+      - "${PORT_MINIO_CONSOLE}:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - ${VOLUME_MOUNT_ROOT}/${CONTAINER_NAME_MINIO}/data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: [ "CMD", "mc", "ready", "local" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
 networks:
   observability-tools:
