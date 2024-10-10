@@ -27,6 +27,8 @@ services:
     depends_on:
       - grafana-postgres
       - prometheus
+      - loki
+      - tempo
 
   grafana-postgres:
     image: postgres:${IMAGE_VERSION_GRAFANA_POSTGRES}
@@ -78,6 +80,12 @@ services:
     volumes:
       - ${CONFIG_MOUNT_ROOT}/${CONTAINER_NAME_PROMETHEUS}/prometheus.yml:/etc/prometheus/prometheus.yml
       - ${VOLUME_MOUNT_ROOT}/${CONTAINER_NAME_PROMETHEUS}/data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --enable-feature=exemplar-storage
+      - --web.enable-remote-write-receiver
+      - --storage.tsdb.retention.time=1y
+      - --web.enable-lifecycle # to enable config reload with HTTP POST http://prometheus:9090/-/reload
     ports:
       - ${PORT_PROMETHEUS}:9090
     networks:
@@ -85,6 +93,27 @@ services:
     # In case you want to scrape node_exporter data from host
     extra_hosts:
       - "host.docker.internal:host-gateway"
+
+  alertmanager:
+    image: prom/alertmanager:${IMAGE_VERSION_ALERTMANAGER}
+    container_name: ${CONTAINER_NAME_ALERTMANAGER}
+    restart: unless-stopped
+    user: '0'
+    volumes:
+      - ${CONFIG_MOUNT_ROOT}/${CONTAINER_NAME_ALERTMANAGER}/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+      - ${VOLUME_MOUNT_ROOT}/${CONTAINER_NAME_ALERTMANAGER}/data:/alertmanager
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    ports:
+      - ${PORT_ALERTMANAGER}:9093
+    networks:
+      - observability-tools
+    # In case you want to scrape node_exporter data from host
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - prometheus
 
   loki:
     image: grafana/loki:${IMAGE_VERSION_LOKI}
@@ -120,6 +149,10 @@ services:
       - ${PORT_OTEL_HTTP}:4318 # OTLP http receiver
     networks:
       - observability-tools
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
 
 networks:
   observability-tools:
