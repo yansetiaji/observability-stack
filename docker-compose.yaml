@@ -29,6 +29,13 @@ services:
       - prometheus
       - loki
       - tempo
+    labels:
+      - "traefik.enable=${TRAEFIK_ENABLE}"
+      - "traefik.http.routers.${CONTAINER_NAME_GRAFANA}.rule=Host(`${CONTAINER_NAME_GRAFANA}.${TRAEFIK_DOMAIN_NAME}`)"
+      - "traefik.http.routers.${CONTAINER_NAME_GRAFANA}.entrypoints=${TRAEFIK_ENTRYPOINT}"
+      - "traefik.http.services.${CONTAINER_NAME_GRAFANA}.loadbalancer.server.port=3000"
+      - "traefik.http.routers.${CONTAINER_NAME_GRAFANA}.service=${CONTAINER_NAME_GRAFANA}"
+      - "traefik.http.routers.${CONTAINER_NAME_GRAFANA}.tls.certresolver=${TRAEFIK_CERT_RESOLVER}"
 
   grafana-postgres:
     image: postgres:${IMAGE_VERSION_GRAFANA_POSTGRES}
@@ -71,6 +78,13 @@ services:
       - /dev/kmsg
     networks:
       - observability-tools
+    labels:
+      - "traefik.enable=${TRAEFIK_ENABLE}"
+      - "traefik.http.routers.${CONTAINER_NAME_CADVISOR}.rule=Host(`${CONTAINER_NAME_CADVISOR}.${TRAEFIK_DOMAIN_NAME}`)"
+      - "traefik.http.routers.${CONTAINER_NAME_CADVISOR}.entrypoints=${TRAEFIK_ENTRYPOINT}"
+      - "traefik.http.services.${CONTAINER_NAME_CADVISOR}.loadbalancer.server.port=8080"
+      - "traefik.http.routers.${CONTAINER_NAME_CADVISOR}.service=${CONTAINER_NAME_CADVISOR}"
+      - "traefik.http.routers.${CONTAINER_NAME_CADVISOR}.tls.certresolver=${TRAEFIK_CERT_RESOLVER}"
 
   prometheus:
     image: prom/prometheus:${IMAGE_VERSION_PROMETHEUS}
@@ -93,6 +107,13 @@ services:
     # In case you want to scrape node_exporter data from host
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    labels:
+      - "traefik.enable=${TRAEFIK_ENABLE}"
+      - "traefik.http.routers.${CONTAINER_NAME_PROMETHEUS}.rule=Host(`${CONTAINER_NAME_PROMETHEUS}.${TRAEFIK_DOMAIN_NAME}`)"
+      - "traefik.http.routers.${CONTAINER_NAME_PROMETHEUS}.entrypoints=${TRAEFIK_ENTRYPOINT}"
+      - "traefik.http.services.${CONTAINER_NAME_PROMETHEUS}.loadbalancer.server.port=9090"
+      - "traefik.http.routers.${CONTAINER_NAME_PROMETHEUS}.service=${CONTAINER_NAME_PROMETHEUS}"
+      - "traefik.http.routers.${CONTAINER_NAME_PROMETHEUS}.tls.certresolver=${TRAEFIK_CERT_RESOLVER}"
 
   alertmanager:
     image: prom/alertmanager:${IMAGE_VERSION_ALERTMANAGER}
@@ -114,6 +135,13 @@ services:
       - "host.docker.internal:host-gateway"
     depends_on:
       - prometheus
+    labels:
+      - "traefik.enable=${TRAEFIK_ENABLE}"
+      - "traefik.http.routers.${CONTAINER_NAME_ALERTMANAGER}.rule=Host(`${CONTAINER_NAME_ALERTMANAGER}.${TRAEFIK_DOMAIN_NAME}`)"
+      - "traefik.http.routers.${CONTAINER_NAME_ALERTMANAGER}.entrypoints=${TRAEFIK_ENTRYPOINT}"
+      - "traefik.http.services.${CONTAINER_NAME_ALERTMANAGER}.loadbalancer.server.port=9090"
+      - "traefik.http.routers.${CONTAINER_NAME_ALERTMANAGER}.service=${CONTAINER_NAME_ALERTMANAGER}"
+      - "traefik.http.routers.${CONTAINER_NAME_ALERTMANAGER}.tls.certresolver=${TRAEFIK_CERT_RESOLVER}"
 
   loki:
     image: grafana/loki:${IMAGE_VERSION_LOKI}
@@ -153,6 +181,18 @@ services:
       - prometheus
       - loki
       - tempo
+    labels:
+      - "traefik.enable=${TRAEFIK_ENABLE}"
+      - "traefik.http.routers.${CONTAINER_NAME_OTEL_COLLECTOR}-grpc.rule=Host(`otel-grpc.${TRAEFIK_DOMAIN_NAME}`)"
+      - "traefik.http.routers.${CONTAINER_NAME_OTEL_COLLECTOR}-grpc.entrypoints=${TRAEFIK_ENTRYPOINT}"
+      - "traefik.http.services.${CONTAINER_NAME_OTEL_COLLECTOR}-grpc.loadbalancer.server.port=4317"
+      - "traefik.http.routers.${CONTAINER_NAME_OTEL_COLLECTOR}-grpc.service=${CONTAINER_NAME_OTEL_COLLECTOR}-grpc"
+      - "traefik.http.routers.${CONTAINER_NAME_OTEL_COLLECTOR}-grpc.tls.certresolver=${TRAEFIK_CERT_RESOLVER}"
+      - "traefik.http.routers.${CONTAINER_NAME_OTEL_COLLECTOR}-http.rule=Host(`otel-http.${TRAEFIK_DOMAIN_NAME}`)"
+      - "traefik.http.routers.${CONTAINER_NAME_OTEL_COLLECTOR}-http.entrypoints=${TRAEFIK_ENTRYPOINT}"
+      - "traefik.http.services.${CONTAINER_NAME_OTEL_COLLECTOR}-http.loadbalancer.server.port=4318"
+      - "traefik.http.routers.${CONTAINER_NAME_OTEL_COLLECTOR}-http.service=${CONTAINER_NAME_OTEL_COLLECTOR}-http"
+      - "traefik.http.routers.${CONTAINER_NAME_OTEL_COLLECTOR}-http.tls.certresolver=${TRAEFIK_CERT_RESOLVER}"
 
 networks:
   observability-tools:
