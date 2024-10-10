@@ -204,6 +204,13 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    labels:
+      - "traefik.enable=${TRAEFIK_ENABLE}"
+      - "traefik.http.routers.${CONTAINER_NAME_MINIO}.rule=Host(`${CONTAINER_NAME_MINIO}.${TRAEFIK_DOMAIN_NAME}`)"
+      - "traefik.http.routers.${CONTAINER_NAME_MINIO}.entrypoints=${TRAEFIK_ENTRYPOINT}"
+      - "traefik.http.services.${CONTAINER_NAME_MINIO}.loadbalancer.server.port=9001"
+      - "traefik.http.routers.${CONTAINER_NAME_MINIO}.service=${CONTAINER_NAME_MINIO}"
+      - "traefik.http.routers.${CONTAINER_NAME_MINIO}.tls.certresolver=${TRAEFIK_CERT_RESOLVER}"
 
 networks:
   observability-tools:
