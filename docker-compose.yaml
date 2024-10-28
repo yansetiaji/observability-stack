@@ -18,6 +18,8 @@ services:
       - ${CONFIG_MOUNT_ROOT}/${CONTAINER_NAME_GRAFANA}/dashboards:/var/lib/grafana/dashboards
     user: '0'
     environment:
+      - GF_DEFAULT_APP_MODE=${GF_DEFAULT_APP_MODE}
+      - GF_DEFAULT_INSTANCE_NAME=${GF_DEFAULT_INSTANCE_NAME}
       - GF_DATABASE_TYPE=${GF_DATABASE_TYPE}
       - GF_DATABASE_HOST=${GF_DATABASE_HOST}
       - GF_DATABASE_NAME=${GF_DATABASE_NAME}
@@ -25,6 +27,10 @@ services:
       - GF_DATABASE_PASSWORD=${GF_DATABASE_PASSWORD}
       - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER}
       - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
+      - GF_SERVER_ROOT_URL=${CONTAINER_NAME_GRAFANA}.${TRAEFIK_DOMAIN_NAME}:443
+      - GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES=${GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES}
+      - GF_ANALYTICS_CHECK_FOR_UPDATES=${GF_ANALYTICS_CHECK_FOR_UPDATES}
+      - GF_ANALYTICS_REPORTING_ENABLED=${GF_ANALYTICS_REPORTING_ENABLED}
     ports:
       - '${PORT_GRAFANA}:3000'
     depends_on:
@@ -125,9 +131,6 @@ services:
       - --storage.path=/alertmanager
     ports:
       - ${PORT_ALERTMANAGER}:9093
-    # In case you want to scrape node_exporter data from host
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     depends_on:
       - prometheus
     labels:
@@ -177,6 +180,7 @@ services:
       - "traefik.http.routers.${CONTAINER_NAME_OTEL_COLLECTOR}-grpc.rule=Host(`otel-grpc.${TRAEFIK_DOMAIN_NAME}`)"
       - "traefik.http.routers.${CONTAINER_NAME_OTEL_COLLECTOR}-grpc.entrypoints=${TRAEFIK_ENTRYPOINT}"
       - "traefik.http.services.${CONTAINER_NAME_OTEL_COLLECTOR}-grpc.loadbalancer.server.port=4317"
+      - "traefik.http.services.${CONTAINER_NAME_OTEL_COLLECTOR}-grpc.loadbalancer.server.scheme=h2c"
       - "traefik.http.routers.${CONTAINER_NAME_OTEL_COLLECTOR}-grpc.service=${CONTAINER_NAME_OTEL_COLLECTOR}-grpc"
       - "traefik.http.routers.${CONTAINER_NAME_OTEL_COLLECTOR}-grpc.tls.certresolver=${TRAEFIK_CERT_RESOLVER}"
       # HTTP

@@ -37,11 +37,14 @@ datasources:
     uid: tempo
     url: http://tempo:3200
     basicAuth: false
-    isDefault: true
+    isDefault: false
     version: 1
     editable: false
     apiVersion: 1
     jsonData:
+      # Multi Tenant
+      # httpHeaderName1: 'X-Scope-OrgID'
+      # Multi Tenant
       httpMethod: GET
       serviceMap:
         datasourceUid: prometheus
@@ -52,3 +55,28 @@ datasources:
         filterByTraceID: true
         filterBySpanID: true
         tags: [ {key: 'service.name', value: 'job'} ]
+  # - name: Tempo-Multitenant
+  #   type: tempo
+  #   access: proxy
+  #   orgId: 1
+  #   uid: tempo-multi
+  #   url: http://tempo:3200
+  #   basicAuth: false
+  #   isDefault: true
+  #   version: 1
+  #   editable: false
+  #   apiVersion: 1
+  #   jsonData:
+  #     httpHeaderName1: 'X-Scope-OrgID'
+  #     httpMethod: GET
+  #     serviceMap:
+  #       datasourceUid: prometheus
+  #     tracesToLogsV2:
+  #       datasourceUid: loki
+  #       spanStartTimeShift: '-1h'
+  #       spanEndTimeShift: '1h'
+  #       filterByTraceID: true
+  #       filterBySpanID: true
+  #       tags: [ {key: 'service.name', value: 'job'} ]
+  #   secureJsonData:
+  #     httpHeaderValue1: 'foo-bar-baz'

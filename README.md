@@ -49,3 +49,29 @@ OTEL_RESOURCE_ATTRIBUTES=<key1>=<val1>,<key2>=<val2>
 # log level default to info
 OTEL_LOG_LEVEL=<log level>
 ```
+
+```mermaid
+flowchart LR
+  subgraph CLIENT_APP
+    direction LR
+    svc[Application Service] --> otel_exporter[Otel Exporter]
+  end
+  otel_exporter --HTTP/GRPC--> otel_collector[Otel Collector]
+  subgraph OBSERVABILITY_STACK
+    direction LR
+    otel_collector --9090--> prometheus
+    otel_collector --3200--> tempo
+    otel_collector --3100--> loki
+    subgraph DATABASE/BACKEND
+      prometheus
+      tempo
+      loki
+    end
+    subgraph USER_FRONTEND
+      Grafana --9090--> prometheus
+      Grafana --3200--> tempo
+      Grafana --3100--> loki
+    end
+  end
+
+```

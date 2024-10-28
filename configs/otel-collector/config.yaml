@@ -16,6 +16,8 @@ exporters:
 
   otlp/tempo:
     endpoint: "http://tempo:4317"
+    # headers:
+    #   x-scope-orgid: foo-bar-baz
     tls:
       insecure: true
 
@@ -40,7 +42,7 @@ service:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlp/tempo]
+      exporters: [debug, otlp/tempo]
     logs:
       receivers: [otlp]
       processors: [batch]
